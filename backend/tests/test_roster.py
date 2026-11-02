@@ -19,6 +19,7 @@ def test_validator_detects_required_process_with_no_entries():
   report=c.post(f"/rosters/{out['id']}/validate").json()
   assert report["valid"] is False
   assert any(x["type"] in ("UNASSIGNED_REQUIRED_PROCESS","COVERAGE_SHORTAGE") for x in report["conflicts"])
+<<<<<<< HEAD
 
 def test_approved_comp_off_blocks_generation():
  c=TestClient(app)
@@ -29,3 +30,5 @@ def test_approved_comp_off_blocks_generation():
   entries=c.get(f"/rosters/{out['id']}/entries").json()
   assert not any(e["employee_id"]==1 and str(e["work_date"])=="2026-11-09" and e["status"]=="working" for e in entries)
  assert c.delete(f"/comp-offs/{created.json()['id']}").status_code==200
+=======
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d

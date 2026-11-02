@@ -3,9 +3,15 @@ from collections import defaultdict
 from calendar import monthrange
 from datetime import date, timedelta
 from sqlalchemy.orm import Session
+<<<<<<< HEAD
 from ..models import Roster, RosterEntry, Process, LeaveRequest, Holiday, Employee, EmployeeAssignment, SchedulingConflict, CompOff
 
 CRITICAL={"COVERAGE_SHORTAGE","UNASSIGNED_REQUIRED_PROCESS","APPROVED_LEAVE_VIOLATION","APPROVED_COMP_OFF_VIOLATION","EMPLOYEE_DOUBLE_BOOKING","SHIFT_OVERLAP","WEEKLY_HOURS_EXCEEDED","UNQUALIFIED_ASSIGNMENT","INVALID_PROCESS_ASSIGNMENT","HOLIDAY_COVERAGE_GAP"}
+=======
+from ..models import Roster, RosterEntry, Process, LeaveRequest, Holiday, Employee, EmployeeAssignment, SchedulingConflict
+
+CRITICAL={"COVERAGE_SHORTAGE","UNASSIGNED_REQUIRED_PROCESS","APPROVED_LEAVE_VIOLATION","EMPLOYEE_DOUBLE_BOOKING","SHIFT_OVERLAP","WEEKLY_HOURS_EXCEEDED","UNQUALIFIED_ASSIGNMENT","INVALID_PROCESS_ASSIGNMENT","HOLIDAY_COVERAGE_GAP"}
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
 def add(items,typ,day,eid=None,pid=None,desc="",suggestion=""):
     items.append((typ,"critical" if typ in CRITICAL else "warning",day,eid,pid,desc,suggestion))
 
@@ -15,7 +21,11 @@ def validate(db:Session, roster:Roster):
     processes=db.query(Process).join(Process.brand).filter(Process.brand.has(active=True)).all()
     process_by_id={p.id:p for p in processes}; employees={e.id:e for e in db.query(Employee).all()}
     qualifications={(a.employee_id,a.process_id):a.qualified for a in db.query(EmployeeAssignment).all()}
+<<<<<<< HEAD
     leaves=db.query(LeaveRequest).all(); comp_offs=db.query(CompOff).all(); holidays=db.query(Holiday).all(); issues=[]
+=======
+    leaves=db.query(LeaveRequest).all(); holidays=db.query(Holiday).all(); issues=[]
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
     by_employee_day=defaultdict(list); by_process_day=defaultdict(list)
     for entry in entries:
         by_employee_day[entry.employee_id,entry.work_date].append(entry)
@@ -32,7 +42,10 @@ def validate(db:Session, roster:Roster):
                 if leave.employee_id==eid and leave.start_date<=day<=leave.end_date:
                     if leave.status=="approved": add(issues,"APPROVED_LEAVE_VIOLATION",day,eid,p.id,"Employee is scheduled during approved leave.","Choose an eligible replacement.")
                     elif leave.status=="pending": add(issues,"NO_AVAILABLE_EMPLOYEE",day,eid,p.id,"Employee has a pending leave request on this date.","Review leave risk before publishing.")
+<<<<<<< HEAD
             if any(c.employee_id==eid and c.work_date==day and c.status=="approved" for c in comp_offs): add(issues,"APPROVED_COMP_OFF_VIOLATION",day,eid,p.id,"Employee is scheduled during an approved compensatory off.","Choose an eligible replacement.")
+=======
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
     for eid,employee in employees.items():
         for n in range(1,monthrange(roster.year,roster.month)[1]+1):
             start=date(roster.year,roster.month,n); end=start+timedelta(days=6)
@@ -47,7 +60,11 @@ def validate(db:Session, roster:Roster):
             valid=[]
             for entry in by_process_day[p.id,day]:
                 employee=employees.get(entry.employee_id)
+<<<<<<< HEAD
                 blocked=not employee or not employee.active or not qualifications.get((entry.employee_id,p.id),False) or p.shift not in (employee.availability or []) or any(l.employee_id==entry.employee_id and l.status=="approved" and l.start_date<=day<=l.end_date for l in leaves) or any(c.employee_id==entry.employee_id and c.work_date==day and c.status=="approved" for c in comp_offs)
+=======
+                blocked=not employee or not employee.active or not qualifications.get((entry.employee_id,p.id),False) or p.shift not in (employee.availability or []) or any(l.employee_id==entry.employee_id and l.status=="approved" and l.start_date<=day<=l.end_date for l in leaves)
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
                 if not blocked: valid.append(entry)
             actual=len(valid)
             if actual<p.minimum_staff:

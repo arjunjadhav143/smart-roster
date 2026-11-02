@@ -24,4 +24,8 @@ def seed(db):
   else:
    # Multi-resource brands include process specialists and shared coverage.
    for offset in (8,9,16): db.add(EmployeeAssignment(employee_id=employees[(i+offset)%len(employees)].id,process_id=p.id))
+<<<<<<< HEAD
  db.add_all([LeaveRequest(employee_id=employees[0].id,start_date=date(2026,11,8),end_date=date(2026,11,8),leave_type="planned",reason="Family event",status="approved"),LeaveRequest(employee_id=employees[3].id,start_date=date(2026,11,15),end_date=date(2026,11,16),leave_type="sick",reason="Medical",status="pending"),CompOff(employee_id=employees[29].id,work_date=date(2026,11,14),reason="Weekend campaign coverage"),Holiday(name="Diwali",date=date(2026,11,8))]); db.commit()
+=======
+ db.add_all([LeaveRequest(employee_id=employees[0].id,start_date=date(2026,11,8),end_date=date(2026,11,8),leave_type="planned",reason="Family event",status="approved"),LeaveRequest(employee_id=employees[3].id,start_date=date(2026,11,15),end_date=date(2026,11,16),leave_type="sick",reason="Medical",status="pending"),Holiday(name="Diwali",date=date(2026,11,8))]); db.commit()
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d

@@ -7,7 +7,10 @@ class ProcessIn(BaseModel): brand_id:int; name:str; description:str=""; minimum_
 class AssignmentIn(BaseModel): employee_id:int; process_id:int; qualified:bool=True; priority:int=1
 class LeaveIn(BaseModel): employee_id:int; start_date:date; end_date:date; leave_type:str; reason:str=""; status:str="pending"
 class PodIn(BaseModel): name:str; lead_id:int|None=None
+<<<<<<< HEAD
 class CompOffIn(BaseModel): employee_id:int; work_date:date; reason:str=""; status:str="approved"
+=======
+>>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
 class HolidayIn(BaseModel): name:str; date:date; brand_id:int|None=None
 class GenerateIn(BaseModel): year:int; month:int; pod_id:int|None=None
 class EntryEdit(BaseModel): employee_id:int|None=None; process_id:int|None=None; status:str|None=None; shift:str|None=None
