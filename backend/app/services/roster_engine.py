@@ -15,14 +15,19 @@ def generate(db: Session, year:int, month:int, pod_id:int|None=None):
     leave_dates={(l.employee_id, d) for l in leaves for d in days if l.start_date<=d<=l.end_date}
     holidays=db.query(Holiday).all()
     holiday_dates={(h.date,h.brand_id) for h in holidays}
-    model=cp_model.CpModel(); x={}; required=[]
+    model=cp_model.CpModel(); x={}; required=[]; weekly_off_penalties=[]
     for p in processes:
       for d in days:
         holiday=(d,p.brand_id) in holiday_dates or (d,None) in holiday_dates
         if d.weekday() not in p.working_days or (holiday and not p.include_holidays): continue
-        candidates=[e for e in employees if (e.id,p.id) in eligible and p.shift in e.availability and d.weekday() not in e.weekly_off_days and (e.id,d) not in leave_dates]
+        # Weekly offs are preferences, not absolute unavailability. Required
+        # brand/process coverage is mandatory and may override a preference.
+        candidates=[e for e in employees if (e.id,p.id) in eligible and p.shift in e.availability and (e.id,d) not in leave_dates]
         vars=[]
-        for e in candidates: x[e.id,p.id,d]=model.NewBoolVar(f"e{e.id}_p{p.id}_{d}"); vars.append(x[e.id,p.id,d])
+        for e in candidates:
+          x[e.id,p.id,d]=model.NewBoolVar(f"e{e.id}_p{p.id}_{d}")
+          vars.append(x[e.id,p.id,d])
+          if d.weekday() in e.weekly_off_days: weekly_off_penalties.append(x[e.id,p.id,d])
         model.Add(sum(vars)>=p.minimum_staff); required.append((p,d,len(candidates)))
     # no double booking; max working days approximates max weekly hours / 8 in rolling calendar weeks
     for e in employees:
@@ -30,7 +35,9 @@ def generate(db: Session, year:int, month:int, pod_id:int|None=None):
       for week_start in days:
         week_end=week_start+timedelta(days=6)
         model.Add(sum(v for (eid,_,dd),v in x.items() if eid==e.id and week_start<=dd<=week_end)*8<=e.max_weekly_hours)
-    model.Minimize(sum(x.values()))
+    # Staff only required coverage first, then minimize work placed on a
+    # preferred weekly-off day. Mandatory coverage always wins.
+    model.Minimize(sum(x.values()) * 100 + sum(weekly_off_penalties))
     solver=cp_model.CpSolver(); solver.parameters.max_time_in_seconds=15; outcome=solver.Solve(model)
     infeasible=[]
     if outcome not in (cp_model.OPTIMAL,cp_model.FEASIBLE):
