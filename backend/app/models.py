@@ -23,6 +23,10 @@ class EmployeeAssignment(Base):
     __table_args__=(UniqueConstraint("employee_id","process_id",name="uq_employee_process"),)
 class LeaveRequest(Base):
     __tablename__="leave_requests"; id: Mapped[int]=mapped_column(primary_key=True); employee_id: Mapped[int]=mapped_column(ForeignKey("employees.id")); start_date: Mapped[date]=mapped_column(Date); end_date: Mapped[date]=mapped_column(Date); leave_type: Mapped[str]=mapped_column(String(30)); reason: Mapped[str]=mapped_column(Text,default=""); status: Mapped[str]=mapped_column(String(20),default="pending")
+class CompOff(Base):
+    """An approved compensatory day off, modelled separately from leave."""
+    __tablename__="comp_offs"; id: Mapped[int]=mapped_column(primary_key=True); employee_id: Mapped[int]=mapped_column(ForeignKey("employees.id"), index=True); work_date: Mapped[date]=mapped_column(Date, index=True); reason: Mapped[str]=mapped_column(Text,default=""); status: Mapped[str]=mapped_column(String(20),default="approved")
+    __table_args__=(UniqueConstraint("employee_id","work_date",name="uq_comp_off_employee_date"),)
 class Holiday(Base):
     __tablename__="public_holidays"; id: Mapped[int]=mapped_column(primary_key=True); name: Mapped[str]=mapped_column(String(120)); date: Mapped[date]=mapped_column(Date, index=True); brand_id: Mapped[int|None]=mapped_column(ForeignKey("brands.id"),nullable=True)
 class Roster(Base):

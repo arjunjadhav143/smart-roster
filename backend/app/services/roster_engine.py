@@ -2,7 +2,7 @@ from calendar import monthrange
 from datetime import date, timedelta
 from ortools.sat.python import cp_model
 from sqlalchemy.orm import Session
-from ..models import Employee, Process, EmployeeAssignment, LeaveRequest, Holiday
+from ..models import Employee, Process, EmployeeAssignment, LeaveRequest, Holiday, CompOff
 
 def generate(db: Session, year:int, month:int, pod_id:int|None=None):
     """CP-SAT model: every required process/day is staffed by qualified, available staff, once/day."""
@@ -13,6 +13,7 @@ def generate(db: Session, year:int, month:int, pod_id:int|None=None):
     eligible={(a.employee_id,a.process_id) for a in assignments}
     leaves=db.query(LeaveRequest).filter_by(status="approved").all()
     leave_dates={(l.employee_id, d) for l in leaves for d in days if l.start_date<=d<=l.end_date}
+    comp_off_dates={(c.employee_id,c.work_date) for c in db.query(CompOff).filter_by(status="approved").all()}
     holidays=db.query(Holiday).all()
     holiday_dates={(h.date,h.brand_id) for h in holidays}
     model=cp_model.CpModel(); x={}; required=[]; weekly_off_penalties=[]
@@ -22,7 +23,7 @@ def generate(db: Session, year:int, month:int, pod_id:int|None=None):
         if d.weekday() not in p.working_days or (holiday and not p.include_holidays): continue
         # Weekly offs are preferences, not absolute unavailability. Required
         # brand/process coverage is mandatory and may override a preference.
-        candidates=[e for e in employees if (e.id,p.id) in eligible and p.shift in e.availability and (e.id,d) not in leave_dates]
+        candidates=[e for e in employees if (e.id,p.id) in eligible and p.shift in e.availability and (e.id,d) not in leave_dates and (e.id,d) not in comp_off_dates]
         vars=[]
         for e in candidates:
           x[e.id,p.id,d]=model.NewBoolVar(f"e{e.id}_p{p.id}_{d}")
