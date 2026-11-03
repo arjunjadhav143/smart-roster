@@ -48,15 +48,12 @@ def pods(db:Session=Depends(get_db)): return [{"id":p.id,"name":p.name,"lead_id"
 def create_pod(data:PodIn,db:Session=Depends(get_db)): o=Pod(**data.model_dump());db.add(o);db.commit();db.refresh(o);return {"id":o.id}
 @app.put("/pods/{id}")
 def update_pod(id:int,data:PodIn,db:Session=Depends(get_db)): o=one(db,Pod,id);o.name=data.name;o.lead_id=data.lead_id;db.commit();return {"id":id}
-<<<<<<< HEAD
 @app.delete("/pods/{id}")
 def delete_pod(id:int,db:Session=Depends(get_db)):
  o=one(db,Pod,id)
  for e in db.query(Employee).filter_by(pod_id=id): e.pod_id=None
  for b in db.query(Brand).filter_by(pod_id=id): b.pod_id=None
  db.delete(o);db.commit();return {"status":"removed"}
-=======
->>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
 @app.get("/pods/{id}")
 def get_pod(id:int,db:Session=Depends(get_db)):
  p=one(db,Pod,id); return {"id":p.id,"name":p.name,"lead_id":p.lead_id,"employees":[{"id":e.id,"name":e.full_name} for e in db.query(Employee).filter_by(pod_id=id).all()]}
@@ -77,14 +74,11 @@ def processes(brand_id:int|None=None,db:Session=Depends(get_db)):
 def create_process(data:ProcessIn,db:Session=Depends(get_db)): o=Process(**data.model_dump());db.add(o);db.commit();db.refresh(o);return o
 @app.put("/processes/{id}")
 def update_process(id:int,data:ProcessIn,db:Session=Depends(get_db)): o=one(db,Process,id);[setattr(o,k,v) for k,v in data.model_dump().items()];db.commit();return {"id":id}
-<<<<<<< HEAD
 @app.delete("/processes/{id}")
 def delete_process(id:int,db:Session=Depends(get_db)):
  o=one(db,Process,id)
  if db.query(RosterEntry).filter_by(process_id=id).first(): raise HTTPException(409,"Process has roster history and cannot be removed")
  db.query(EmployeeAssignment).filter_by(process_id=id).delete(synchronize_session=False);db.delete(o);db.commit();return {"status":"removed"}
-=======
->>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
 @app.get("/assignments")
 def assignments(db:Session=Depends(get_db)): return [{"id":a.id,"employee_id":a.employee_id,"employee":a.employee.full_name,"process_id":a.process_id,"process":a.process.name,"brand":a.process.brand.name,"qualified":a.qualified} for a in db.query(EmployeeAssignment).all()]
 @app.post("/assignments")
@@ -103,7 +97,6 @@ def approve_leave(id:int,db:Session=Depends(get_db)): o=one(db,LeaveRequest,id);
 def reject_leave(id:int,db:Session=Depends(get_db)): o=one(db,LeaveRequest,id);o.status="rejected";db.commit();return {"status":"rejected"}
 @app.post("/leaves/{id}/cancel")
 def cancel_leave(id:int,db:Session=Depends(get_db)): o=one(db,LeaveRequest,id);o.status="cancelled";db.commit();return {"status":"cancelled"}
-<<<<<<< HEAD
 @app.delete("/leaves/{id}")
 def delete_leave(id:int,db:Session=Depends(get_db)): db.delete(one(db,LeaveRequest,id));db.commit();return {"status":"removed"}
 @app.get("/comp-offs")
@@ -114,8 +107,6 @@ def create_comp_off(data:CompOffIn,db:Session=Depends(get_db)): o=CompOff(**data
 def update_comp_off(id:int,data:CompOffIn,db:Session=Depends(get_db)): o=one(db,CompOff,id);[setattr(o,k,v) for k,v in data.model_dump().items()];db.commit();return {"id":id}
 @app.delete("/comp-offs/{id}")
 def delete_comp_off(id:int,db:Session=Depends(get_db)): db.delete(one(db,CompOff,id));db.commit();return {"status":"removed"}
-=======
->>>>>>> 507587b3f44247ef3719d068bdfc140e94acfb7d
 @app.get("/holidays")
 def holidays(db:Session=Depends(get_db)): return [{"id":h.id,"name":h.name,"date":h.date,"brand_id":h.brand_id} for h in db.query(Holiday).order_by(Holiday.date).all()]
 @app.post("/holidays")
@@ -133,8 +124,6 @@ def generate_roster(data:GenerateIn,db:Session=Depends(get_db)):
  if status=="INFEASIBLE":
   roster.status="infeasible"
   db.commit()
-  # Keep the generation response shape stable for consumers and tests.  An
-  # infeasible solve is a valid solver result, not an API error.
   return {"id":roster.id,"status":"infeasible","solver_status":status,"issues":issues}
  db.add_all([RosterEntry(roster_id=roster.id,employee_id=e,process_id=p,work_date=d,status=s,shift=sh) for e,p,d,s,sh in rows]);db.commit(); conflicts=validate(db,roster)
  return {"id":roster.id,"status":roster.status,"solver_status":status,"entries":len(rows),"conflicts":len(conflicts)}
