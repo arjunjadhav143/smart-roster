@@ -905,35 +905,32 @@ function fieldsFor(
       },
     ];
   }
-
-  if (title === "Assignments") {
-    return [
-      {
-        key: "employee_id",
-        label: "Employee",
-        type: "select",
-        required: true,
-        options: employee,
-      },
-      {
-        key: "process_id",
-        label: "Process",
-        type: "select",
-        required: true,
-        options: process,
-      },
-      {
-        key: "qualified",
-        label: "Qualified",
-        type: "checkbox",
-      },
-      {
-        key: "priority",
-        label: "Priority",
-        type: "number",
-      },
-    ];
-  }
+  
+  if(title==='Assignments')return[
+{
+  key:'employee_id',
+  label:'Employee',
+  type:'select',
+  required:true,
+  options:[{value:'',label:'Select Employee'},...employee]
+},
+{
+  key:'process_id',
+  label:'Process',
+  type:'select',
+  required:true,
+  options:[{value:'',label:'Select Process'},...process]
+},
+{
+  key:'qualified',
+  label:'Qualified',
+  type:'checkbox'
+},
+{
+  key:'priority',
+  label:'Priority',
+  type:'number'
+}];
 
   if (title === "Leave Management") {
     return [
@@ -1251,6 +1248,12 @@ function Manager({
 
   const save = async () => {
     if (!editing) return;
+    if(title==='Assignments'){
+  if(!editing.employee_id || !editing.process_id){
+    notice('Please select both an Employee and a Process.');
+    return;
+  }
+}
 
     setSaving(true);
 
