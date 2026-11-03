@@ -115,18 +115,87 @@ def create_holiday(data:HolidayIn,db:Session=Depends(get_db)): h=Holiday(**data.
 def update_holiday(id:int,data:HolidayIn,db:Session=Depends(get_db)): h=one(db,Holiday,id);[setattr(h,k,v) for k,v in data.model_dump().items()];db.commit();return {"id":id}
 @app.delete("/holidays/{id}")
 def delete_holiday(id:int,db:Session=Depends(get_db)): db.delete(one(db,Holiday,id));db.commit();return {"status":"removed"}
+
 @app.post("/rosters/generate")
-def generate_roster(data:GenerateIn,db:Session=Depends(get_db)):
- old=db.query(Roster).filter_by(year=data.year,month=data.month).first()
- if old: db.delete(old);db.commit()
- roster=Roster(year=data.year,month=data.month,status="draft");db.add(roster);db.flush()
- rows,issues,status=generate(db,data.year,data.month,data.pod_id);roster.solver_status=status
- if status=="INFEASIBLE":
-  roster.status="infeasible"
-  db.commit()
-  return {"id":roster.id,"status":"infeasible","solver_status":status,"issues":issues}
- db.add_all([RosterEntry(roster_id=roster.id,employee_id=e,process_id=p,work_date=d,status=s,shift=sh) for e,p,d,s,sh in rows]);db.commit(); conflicts=validate(db,roster)
- return {"id":roster.id,"status":roster.status,"solver_status":status,"entries":len(rows),"conflicts":len(conflicts)}
+def generate_roster(data: GenerateIn, db: Session = Depends(get_db)):
+    try:
+        # Find the existing roster for this month
+        old = db.query(Roster).filter_by(
+            year=data.year,
+            month=data.month
+        ).first()
+
+        # Remove old conflict records before deleting the roster
+        if old:
+            db.query(SchedulingConflict).filter_by(
+                roster_id=old.id
+            ).delete(synchronize_session=False)
+
+            # Roster entries are removed through the model cascade
+            db.delete(old)
+            db.flush()
+
+        # Create a fresh draft roster
+        roster = Roster(
+            year=data.year,
+            month=data.month,
+            status="draft"
+        )
+        db.add(roster)
+        db.flush()
+
+        # Generate roster assignments
+        rows, issues, status = generate(
+            db,
+            data.year,
+            data.month,
+            data.pod_id
+        )
+
+        roster.solver_status = status
+
+        if status == "INFEASIBLE":
+            roster.status = "infeasible"
+            db.commit()
+
+            return {
+                "id": roster.id,
+                "status": "infeasible",
+                "solver_status": status,
+                "issues": issues
+            }
+
+        # Save generated assignments
+        db.add_all([
+            RosterEntry(
+                roster_id=roster.id,
+                employee_id=e,
+                process_id=p,
+                work_date=d,
+                status=s,
+                shift=sh
+            )
+            for e, p, d, s, sh in rows
+        ])
+
+        db.commit()
+
+        # Validate the newly generated roster
+        conflicts = validate(db, roster)
+        db.commit()
+
+        return {
+            "id": roster.id,
+            "status": roster.status,
+            "solver_status": status,
+            "entries": len(rows),
+            "conflicts": len(conflicts)
+        }
+
+    except Exception:
+        db.rollback()
+        raise
+
 @app.get("/rosters")
 def rosters(db:Session=Depends(get_db)): return [{"id":r.id,"year":r.year,"month":r.month,"status":r.status,"solver_status":r.solver_status,"entry_count":len(r.entries)} for r in db.query(Roster).order_by(Roster.year.desc(),Roster.month.desc()).all()]
 @app.get("/rosters/{id}/entries")
