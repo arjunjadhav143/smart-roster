@@ -279,53 +279,54 @@ function RosterCalendar({
   const [status, setStatus] = useState("working");
   const [backups, setBackups] = useState<any[]>([]);
 
-  const scopeValues = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          entries
-            .map((e) =>
-              scope === "pod"
-                ? e.pod
-                : scope === "brand"
-                ? e.brand
-                : scope === "process"
-                ? e.process
-                : e.employee
-            )
-            .filter(Boolean)
-        )
-      ).sort(),
-    [entries, scope]
-  );
+  // Get available values for the selected view
+const getScopeValues = (selectedScope: string) => {
+  const values = entries.map((e) => {
+    if (selectedScope === "pod") return e.pod;
+    if (selectedScope === "brand") return e.brand;
+    if (selectedScope === "process") return e.process;
+    if (selectedScope === "employee") return e.employee;
+    return null;
+  });
 
-  const scoped = useMemo(
-    () =>
-      scope === "company"
-        ? entries
-        : entries.filter((e) =>
-            String(
-              scope === "pod"
-                ? e.pod
-                : scope === "brand"
-                ? e.brand
-                : scope === "process"
-                ? e.process
-                : e.employee
-            )
-              .toLowerCase()
-              .includes(filter.toLowerCase())
-          ),
-    [entries, scope, filter]
-  );
+  return Array.from(new Set(values.filter(Boolean)))
+    .map(String)
+    .sort();
+};
 
-  const employees = useMemo(
-    () =>
-      Array.from(
-        new Map(scoped.map((e) => [e.employee_id, e.employee])).entries()
-      ),
-    [scoped]
-  );
+const scopeValues = useMemo(
+  () => getScopeValues(scope),
+  [entries, scope]
+);
+
+// Filter roster entries according to selected view
+const scoped = useMemo(() => {
+  if (scope === "company") return entries;
+
+  if (!filter) return entries;
+
+  return entries.filter((e) => {
+    let value = "";
+
+    if (scope === "pod") value = e.pod || "";
+    if (scope === "brand") value = e.brand || "";
+    if (scope === "process") value = e.process || "";
+    if (scope === "employee") value = e.employee || "";
+
+    return String(value) === filter;
+  });
+}, [entries, scope, filter]);
+
+// Display employees belonging to the filtered roster
+const employees = useMemo(
+  () =>
+    Array.from(
+      new Map(
+        scoped.map((e) => [e.employee_id, e.employee])
+      ).entries()
+    ),
+  [scoped]
+);
 
   const days = useMemo(
     () =>
@@ -502,33 +503,45 @@ function RosterCalendar({
         </strong>
 
         <select
-          value={scope}
-          onChange={(e) => {
-            setScope(e.target.value);
-            setFilter("");
-          }}
-        >
-          <option value="company">Company-wide view</option>
-          <option value="pod">Pod-wise view</option>
-          <option value="brand">Brand-wise view</option>
-          <option value="process">Process-wise view</option>
-          <option value="employee">Employee-wise view</option>
-        </select>
+  aria-label="Roster view"
+  value={scope}
+  onChange={(e) => {
+    const nextScope = e.target.value;
 
-        {scope !== "company" && (
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="">All {scope}s</option>
+    setScope(nextScope);
 
-            {scopeValues.map((x) => (
-              <option key={String(x)} value={String(x)}>
-                {String(x)}
-              </option>
-            ))}
-          </select>
-        )}
+    // Automatically select the first available group
+    const values = getScopeValues(nextScope);
+
+    setFilter(
+      nextScope === "company"
+        ? ""
+        : values[0] || ""
+    );
+  }}
+>
+  <option value="company">Company-wide view</option>
+  <option value="pod">Pod-wise view</option>
+  <option value="brand">Brand-wise view</option>
+  <option value="process">Process-wise view</option>
+  <option value="employee">Employee-wise view</option>
+</select>
+
+{scope !== "company" && (
+  <select
+    aria-label="Select roster group"
+    value={filter}
+    onChange={(e) => setFilter(e.target.value)}
+  >
+    <option value="">All {scope}s</option>
+
+    {scopeValues.map((value) => (
+      <option key={value} value={value}>
+        {value}
+      </option>
+    ))}
+  </select>
+)}
 
         <button onClick={() => void validate()}>
           Validate
