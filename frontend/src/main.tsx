@@ -842,6 +842,11 @@ function fieldsFor(
         type: "select",
         options: pod,
       },
+      {
+        key: "active",
+        label: "Active",
+        type: "checkbox",
+      },
     ];
   }
 
@@ -1218,9 +1223,8 @@ function Manager({
     fs.forEach((field) => {
       if (field.type === "checkbox") {
         initial[field.key] =
-          field.key === "qualified" ||
-          field.key === "include_holidays"
-            ? false
+          field.key === "active"
+            ? true
             : false;
       } else if (
         field.key === "max_weekly_hours"
@@ -1372,6 +1376,36 @@ function Manager({
     }
   };
 
+  const changeBrandStatus = async (
+    row: any,
+    active: boolean
+  ) => {
+    try {
+      await request(`/brands/${row.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: row.name,
+          description: row.description || "",
+          pod_id: row.pod_id ?? null,
+          active,
+        }),
+      });
+
+      notice(
+        active
+          ? "Brand reactivated successfully."
+          : "Brand deactivated successfully."
+      );
+
+      await reload();
+    } catch (e: any) {
+      notice(`Could not update brand status: ${e.message}`);
+    }
+  };
+
   const leaveAction = async (
     row: any,
     action: string
@@ -1506,36 +1540,48 @@ function Manager({
                           Edit
                         </button>
 
-                        {title ===
-                          "Employees" && (
-                          <>
-                            {row.active ===
-                            false ? (
-                              <button
-                                className="btn-success"
-                                onClick={() =>
-                                  void changeEmployeeStatus(
-                                    row,
-                                    true
-                                  )
-                                }
-                              >
-                                Reactivate
-                              </button>
-                            ) : (
-                              <button
-                                className="btn-warning"
-                                onClick={() =>
-                                  void changeEmployeeStatus(
-                                    row,
-                                    false
-                                  )
-                                }
-                              >
-                                Deactivate
-                              </button>
-                            )}
-                          </>
+                        {title === "Employees" && (
+                          row.active === false ? (
+                            <button
+                              className="btn-success"
+                              onClick={() =>
+                                void changeEmployeeStatus(row, true)
+                              }
+                            >
+                              Reactivate
+                            </button>
+                          ) : (
+                            <button
+                              className="btn-warning"
+                              onClick={() =>
+                                void changeEmployeeStatus(row, false)
+                              }
+                            >
+                              Deactivate
+                            </button>
+                          )
+                        )}
+
+                        {title === "Brands" && (
+                          row.active === false ? (
+                            <button
+                              className="btn-success"
+                              onClick={() =>
+                                void changeBrandStatus(row, true)
+                              }
+                            >
+                              Reactivate
+                            </button>
+                          ) : (
+                            <button
+                              className="btn-warning"
+                              onClick={() =>
+                                void changeBrandStatus(row, false)
+                              }
+                            >
+                              Deactivate
+                            </button>
+                          )
                         )}
 
                         {title ===
@@ -1586,20 +1632,15 @@ function Manager({
                             </button>
                           )}
 
-                        <button
-                          className="danger"
-                          onClick={() =>
-                            void remove(row)
-                          }
-                        >
-                          {title ===
-                          "Employees"
-                            ? "Deactivate"
-                            : title ===
-                              "Brands"
-                            ? "Deactivate"
-                            : "Delete"}
-                        </button>
+                        {title !== "Employees" &&
+                          title !== "Brands" && (
+                            <button
+                              className="danger"
+                              onClick={() => void remove(row)}
+                            >
+                              Delete
+                            </button>
+                          )}
                       </td>
                     )}
                   </tr>

@@ -17,6 +17,7 @@ class BrandIn(BaseModel):
     name: str
     description: str = ""
     pod_id: int | None = None
+    active: bool = True
 
 
 class ProcessIn(BaseModel):
